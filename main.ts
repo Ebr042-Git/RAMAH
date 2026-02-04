@@ -1,67 +1,88 @@
-interface Task {
-    Module: string;
-    Task: string;
-    Status: string;
-    AssignedTo: string;
-    Date: string;
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Project Management Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
+        .card { background: white; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 6px solid #2980b9; }
+        h2 { color: #2c3e50; font-size: 18px; margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { text-align: left; background: #f8f9fa; padding: 12px; font-size: 13px; color: #7f8c8d; }
+        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .remarks-input { width: 95%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; }
+        .btn-done { background: #27ae60; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-done:disabled { background: #bdc3c7; cursor: not-allowed; }
+        .status-done { color: #27ae60; font-weight: bold; }
+    </style>
+</head>
+<body>
 
-// Replace with your Google Apps Script Web App URL
-const API_URL = "https://script.google.com/macros/s/AKfycbypfFruIPEsgSJMqajv28LmRidZjoFNZsm7xenU1DkRXjemjUWtmSFl3-25YteCryMF/exec";
+    <h1>📊 Project Implementation Tracker</h1>
+    <div id="dashboard">Loading data...</div>
 
-async function fetchTasks(): Promise<Task[]> {
-    const response = await fetch(API_URL);
-    if (!response.ok) throw new Error("Failed to fetch data");
-    return response.json();
-}
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbypfFruIPEsgSJMqajv28LmRidZjoFNZsm7xenU1DkRXjemjUWtmSFl3-25YteCryMF/exec";
 
-function populateModules(tasks: Task[]) {
-    const select = document.getElementById("moduleSelect") as HTMLSelectElement;
-    const modules = Array.from(new Set(tasks.map(t => t.Module)));
+        async function saveData(payload) {
+            await fetch(API_URL, {
+                method: 'POST',
+                mode: 'no-cors', // Critical for Google Apps Script redirection
+                body: JSON.stringify(payload)
+            });
+        }
 
-    select.innerHTML = modules.map(m => `<option value="${m}">${m}</option>`).join("");
-    select.addEventListener("change", () => renderDashboard(tasks));
-}
+        async function markDone(row) {
+            if(!confirm("Mark this task as Done?")) return;
+            await saveData({ action: "updateStatus", row: row });
+            location.reload(); 
+        }
 
-function renderDashboard(tasks: Task[]) {
-    const select = document.getElementById("moduleSelect") as HTMLSelectElement;
-    const moduleName = select.value;
-    const moduleTasks = tasks.filter(t => t.Module === moduleName);
+        async function saveRemarks(row, text) {
+            await saveData({ action: "updateRemarks", row: row, text: text });
+        }
 
-    // Progress
-    const completed = moduleTasks.filter(t => t.Status.toLowerCase() === "done").length;
-    const percent = moduleTasks.length === 0 ? 0 : Math.round((completed / moduleTasks.length) * 100);
-    const progressDiv = document.getElementById("progressContainer")!;
-    progressDiv.innerHTML = `<div class="progress-bar"><div class="progress-fill" style="width:${percent}%">${percent}%</div></div>`;
+        async function loadDashboard() {
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                const modules = [...new Set(data.map(d => d.Module))];
+                let html = '';
 
-    // Table
-    const tableContainer = document.getElementById("tableContainer")!;
-    let html = `<table>
-        <tr><th>Task</th><th>Status</th><th>Assignee</th><th>Date</th></tr>`;
-    moduleTasks.forEach(t => {
-        html += `<tr>
-            <td>${t.Task}</td>
-            <td>${t.Status}</td>
-            <td>${t.AssignedTo}</td>
-            <td>${t.Date}</td>
-        </tr>`;
-    });
-    html += `</table>`;
-    tableContainer.innerHTML = html;
-}
+                modules.forEach(mod => {
+                    const tasks = data.filter(d => d.Module === mod);
+                    html += `
+                        <div class="card">
+                            <h2>${mod}</h2>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40%">Task Description</th>
+                                        <th style="width: 30%">Remarks</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${tasks.map(t => `
+                                        <tr>
+                                            <td>${t.Task}</td>
+                                            <td><input type="text" class="remarks-input" value="${t.Remarks || ''}" onblur="saveRemarks(${t.RowIndex}, this.value)"></td>
+                                            <td class="${t.Status.toLowerCase() === 'done' ? 'status-done' : ''}">${t.Status || 'Pending'}</td>
+                                            <td><button class="btn-done" onclick="markDone(${t.RowIndex})" ${t.Status.toLowerCase() === 'done' ? 'disabled' : ''}>Mark Done</button></td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>`;
+                });
+                document.getElementById('dashboard').innerHTML = html;
+            } catch (e) {
+                document.getElementById('dashboard').innerHTML = "Error loading dashboard. Ensure script is deployed as 'Anyone'.";
+            }
+        }
 
-async function init() {
-    try {
-        const tasks = await fetchTasks();
-        if (tasks.length === 0) throw new Error("No tasks found");
-        populateModules(tasks);
-        renderDashboard(tasks);
-    } catch (err) {
-        console.error(err);
-        const tableContainer = document.getElementById("tableContainer")!;
-        tableContainer.innerText = "Failed to load dashboard data.";
-    }
-}
-
-init();
-
+        loadDashboard();
+    </script>
+</body>
+</html>
