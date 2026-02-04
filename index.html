@@ -2,112 +2,72 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Executive Project Dashboard</title>
+    <title>Project Management Dashboard</title>
     <style>
-        :root { --primary: #2980b9; --success: #27ae60; --bg: #f4f7f9; --text: #2c3e50; }
-        body { font-family: 'Segoe UI', Roboto, sans-serif; background-color: var(--bg); color: var(--text); padding: 30px; margin: 0; }
-        header { text-align: center; margin-bottom: 40px; }
-        h1 { margin: 0; font-weight: 300; letter-spacing: 1px; }
-        
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; max-width: 1400px; margin: 0 auto; }
-        
-        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); border-top: 6px solid var(--primary); transition: transform 0.2s; }
-        .card:hover { transform: translateY(-5px); }
-        .card h3 { margin: 0 0 15px 0; font-size: 16px; min-height: 45px; line-height: 1.4; color: #34495e; }
-        
-        .perc-container { display: flex; align-items: baseline; gap: 5px; margin-bottom: 10px; }
-        .percentage { font-size: 32px; font-weight: 800; color: var(--success); }
-        .perc-symbol { font-size: 18px; color: var(--success); }
-        
-        .progress-bg { background: #eee; height: 12px; border-radius: 6px; overflow: hidden; margin-bottom: 15px; }
-        .progress-bar { background: var(--success); height: 100%; border-radius: 6px; transition: width 1s ease-in-out; }
-        
-        .footer-stats { display: flex; justify-content: space-between; font-size: 13px; color: #7f8c8d; font-weight: 500; }
-        .status-tag { padding: 3px 8px; border-radius: 4px; font-size: 11px; text-transform: uppercase; }
-        .tag-complete { background: #d4efdf; color: #1d8348; }
-        .tag-progress { background: #ebf5fb; color: #2874a6; }
-
-        .loader { text-align: center; font-size: 18px; color: #95a5a6; margin-top: 100px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 20px; }
+        .card { background: white; border-radius: 10px; padding: 20px; margin-bottom: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .card h2 { color: #2980b9; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; }
+        .progress-container { background: #eee; height: 15px; border-radius: 10px; margin: 15px 0; }
+        .progress-fill { background: #27ae60; height: 100%; border-radius: 10px; transition: width 0.5s; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th { text-align: left; color: #7f8c8d; padding: 10px; border-bottom: 1px solid #eee; }
+        td { padding: 10px; border-bottom: 1px solid #f9f9f9; }
+        .btn-edit { background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        .btn-edit:hover { background: #2980b9; }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>📊 Project Implementation Status</h1>
-        <p>Live Resource & Module Tracking</p>
-    </header>
-
-    <div id="kpiGrid" class="grid">
-        <div class="loader">Fetching latest spreadsheet data...</div>
-    </div>
+    <h1>Project Dashboard (Grouped)</h1>
+    <div id="dashboardContainer">Loading grouped tasks...</div>
 
     <script>
-        // Your updated script URL
-        const API_URL = "https://script.google.com/macros/s/AKfycbyV-Q6NUKGUekXC7xbZrSbV9gACyYpXRcPpnMBrTxZmFczZ60XetumZOtKPHnrl7TRH/exec";
+        const API_URL = "https://script.google.com/macros/s/AKfycbypfFruIPEsgSJMqajv28LmRidZjoFNZsm7xenU1DkRXjemjUWtmSFl3-25YteCryMF/exec";
 
-        async function loadDashboard() {
-            try {
-                const response = await fetch(API_URL);
-                if (!response.ok) throw new Error("Connection failed");
-                const data = await response.json();
-                
-                // Identify unique modules/headings
-                const modules = [...new Set(data.map(item => item.Module))];
-                let gridHtml = '';
-
-                modules.forEach(mod => {
-                    const moduleTasks = data.filter(item => item.Module === mod);
-                    const totalTasks = moduleTasks.length;
-                    
-                    // Calculation Logic: 
-                    // Done = 1 point, Text/In Progress = 0.5 points, Empty = 0 points
-                    let points = 0;
-                    moduleTasks.forEach(task => {
-                        const status = (task.Status || "").toLowerCase().trim();
-                        if (status === "done") {
-                            points += 1;
-                        } else if (status.length > 0) {
-                            points += 0.5;
-                        }
-                    });
-
-                    const percentage = totalTasks === 0 ? 0 : Math.round((points / totalTasks) * 100);
-                    const isComplete = percentage === 100;
-
-                    gridHtml += `
-                        <div class="card">
-                            <h3>${mod}</h3>
-                            <div class="perc-container">
-                                <span class="percentage">${percentage}</span>
-                                <span class="perc-symbol">%</span>
-                            </div>
-                            <div class="progress-bg">
-                                <div class="progress-bar" style="width: ${percentage}%"></div>
-                            </div>
-                            <div class="footer-stats">
-                                <span>Tasks: ${totalTasks}</span>
-                                <span class="status-tag ${isComplete ? 'tag-complete' : 'tag-progress'}">
-                                    ${isComplete ? 'Completed' : 'In Progress'}
-                                </span>
-                            </div>
-                        </div>
-                    `;
-                });
-
-                document.getElementById('kpiGrid').innerHTML = gridHtml;
-
-            } catch (error) {
-                console.error(error);
-                document.getElementById('kpiGrid').innerHTML = `
-                    <div class="loader" style="color: #e74c3c;">
-                        <strong>Error Loading Data</strong><br>
-                        Please ensure the Google Apps Script is deployed as 'Anyone'.
-                    </div>`;
-            }
+        async function updateStatus(row, newStatus) {
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ row: row, status: newStatus })
+            });
+            if(res.ok) alert("Status Updated!");
+            loadDashboard();
         }
 
-        // Run on page load
+        async function loadDashboard() {
+            const response = await fetch(API_URL);
+            const data = await response.json();
+            
+            const modules = [...new Set(data.map(d => d.Module))];
+            let html = '';
+
+            modules.forEach(mod => {
+                const tasks = data.filter(d => d.Module === mod);
+                const completed = tasks.filter(t => t.Status.toLowerCase() === 'done').length;
+                const percent = Math.round((completed / tasks.length) * 100);
+
+                html += `
+                    <div class="card">
+                        <h2>${mod}</h2>
+                        <div class="progress-container">
+                            <div class="progress-fill" style="width:${percent}%"></div>
+                        </div>
+                        <p><strong>${percent}% Complete</strong> (${completed}/${tasks.length} tasks)</p>
+                        <table>
+                            <tr><th>Task Description</th><th>Status</th><th>Action</th></tr>
+                            ${tasks.map(t => `
+                                <tr>
+                                    <td>${t.Task}</td>
+                                    <td>${t.Status || 'Pending'}</td>
+                                    <td><button class="btn-edit" onclick="updateStatus(${t.RowIndex}, 'Done')">Mark Done</button></td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    </div>
+                `;
+            });
+            document.getElementById('dashboardContainer').innerHTML = html;
+        }
+
         loadDashboard();
     </script>
 </body>
