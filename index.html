@@ -1,1 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Project Dashboard</title>
+<style>
+body { font-family: Arial; padding: 20px; }
+.progress-bar { width: 300px; height: 25px; background: #eee; border-radius: 5px; margin-bottom: 10px; }
+.progress-fill { height: 100%; background: #4caf50; border-radius: 5px; text-align: center; color: white; line-height: 25px; }
+table { border-collapse: collapse; margin-top: 20px; width: 70%; }
+table, th, td { border: 1px solid #444; padding: 6px; }
+</style>
+</head>
+<body>
+
+<h1>📊 Project Dashboard</h1>
+
+<label>Select Module:</label>
+<select id="moduleSelect"></select>
+
+<h2>Module Progress</h2>
+<div id="progressContainer"></div>
+
+<h2>Task Table</h2>
+<div id="tableContainer"></div>
+
+<script type="module" src="./dist/main.js"></script>
+</body>
+</html>
 
