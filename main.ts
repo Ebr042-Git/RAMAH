@@ -7,7 +7,7 @@ interface Task {
 }
 
 // Replace with your Google Apps Script Web App URL
-const API_URL = "https://script.google.com/macros/s/AKfycbzEdcuyvgbnmfYi0j4xZGu9bSj1uTDWbr9t13QTzWX_UI4Junt_HM98doudvLEhsXxQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbypfFruIPEsgSJMqajv28LmRidZjoFNZsm7xenU1DkRXjemjUWtmSFl3-25YteCryMF/exec";
 
 async function fetchTasks(): Promise<Task[]> {
     const response = await fetch(API_URL);
