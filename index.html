@@ -3,115 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Dashboard</title>
+    <title>Executive Project Dashboard</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; background-color: #f4f7f6; color: #333; }
-        h1 { color: #2c3e50; }
-        .controls { margin-bottom: 30px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        select { padding: 8px; font-size: 16px; border-radius: 4px; border: 1px solid #ddd; width: 250px; }
+        :root { --primary: #2980b9; --success: #27ae60; --bg: #f4f7f9; --text: #2c3e50; }
+        body { font-family: 'Segoe UI', Roboto, sans-serif; background-color: var(--bg); color: var(--text); padding: 30px; margin: 0; }
+        header { text-align: center; margin-bottom: 40px; }
+        h1 { margin: 0; font-weight: 300; letter-spacing: 1px; }
         
-        .progress-bar { width: 100%; max-width: 400px; height: 30px; background: #eee; border-radius: 15px; overflow: hidden; margin: 10px 0; border: 1px solid #ddd; }
-        .progress-fill { height: 100%; background: #27ae60; text-align: center; color: white; line-height: 30px; font-weight: bold; transition: width 0.5s ease; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; max-width: 1400px; margin: 0 auto; }
         
-        table { border-collapse: collapse; width: 100%; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-top: 10px; }
-        th { background-color: #2980b9; color: white; text-align: left; padding: 12px; }
-        td { padding: 12px; border-bottom: 1px solid #eee; }
-        tr:hover { background-color: #f9f9f9; }
+        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); border-top: 6px solid var(--primary); transition: transform 0.2s; }
+        .card:hover { transform: translateY(-5px); }
+        .card h3 { margin: 0 0 15px 0; font-size: 16px; min-height: 45px; line-height: 1.4; color: #34495e; }
         
-        .loading { color: #888; font-style: italic; }
-        .status-done { color: #27ae60; font-weight: bold; }
+        .perc-container { display: flex; align-items: baseline; gap: 5px; margin-bottom: 10px; }
+        .percentage { font-size: 32px; font-weight: 800; color: var(--success); }
+        .perc-symbol { font-size: 18px; color: var(--success); }
+        
+        .progress-bg { background: #eee; height: 12px; border-radius: 6px; overflow: hidden; margin-bottom: 15px; }
+        .progress-bar { background: var(--success); height: 100%; border-radius: 6px; transition: width 1s ease-in-out; }
+        
+        .footer-stats { display: flex; justify-content: space-between; font-size: 13px; color: #7f8c8d; font-weight: 500; }
+        .status-tag { padding: 3px 8px; border-radius: 4px; font-size: 11px; text-transform: uppercase; }
+        .tag-complete { background: #d4efdf; color: #1d8348; }
+        .tag-progress { background: #ebf5fb; color: #2874a6; }
+
+        .loader { text-align: center; font-size: 18px; color: #95a5a6; margin-top: 100px; }
     </style>
 </head>
 <body>
 
-    <h1>📊 Project Dashboard</h1>
+    <header>
+        <h1>📊 Project Implementation Status</h1>
+        <p>Live Resource & Module Tracking</p>
+    </header>
 
-    <div class="controls">
-        <label><strong>Select Module:</strong></label><br><br>
-        <select id="moduleSelect">
-            <option value="">Loading data...</option>
-        </select>
-    </div>
-
-    <h2>Module Progress</h2>
-    <div id="progressContainer">
-        <p class="loading">Waiting for selection...</p>
-    </div>
-
-    <h2>Task Table</h2>
-    <div id="tableContainer">
-        <p class="loading">Connect to Google Sheets to see tasks.</p>
+    <div id="kpiGrid" class="grid">
+        <div class="loader">Fetching latest spreadsheet data...</div>
     </div>
 
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbzEdcuyvgbnmfYi0j4xZGu9bSj1uTDWbr9t13QTzWX_UI4Junt_HM98doudvLEhsXxQ/exec";
-        let cachedData = [];
+        // Your updated script URL
+        const API_URL = "https://script.google.com/macros/s/AKfycbyV-Q6NUKGUekXC7xbZrSbV9gACyYpXRcPpnMBrTxZmFczZ60XetumZOtKPHnrl7TRH/exec";
 
-        async function loadData() {
+        async function loadDashboard() {
             try {
                 const response = await fetch(API_URL);
-                if (!response.ok) throw new Error("Network error");
+                if (!response.ok) throw new Error("Connection failed");
                 const data = await response.json();
-                cachedData = data;
                 
-                if (data.length > 0) {
-                    populateModules(data);
-                    renderDashboard(data[0].Module); // Auto-load first module
-                } else {
-                    document.getElementById("tableContainer").innerHTML = "No data found in sheet.";
-                }
-            } catch (err) {
-                console.error("Error:", err);
-                document.getElementById("tableContainer").innerHTML = "<span style='color:red'>Failed to load data. Ensure your Web App is deployed as 'Anyone'.</span>";
+                // Identify unique modules/headings
+                const modules = [...new Set(data.map(item => item.Module))];
+                let gridHtml = '';
+
+                modules.forEach(mod => {
+                    const moduleTasks = data.filter(item => item.Module === mod);
+                    const totalTasks = moduleTasks.length;
+                    
+                    // Calculation Logic: 
+                    // Done = 1 point, Text/In Progress = 0.5 points, Empty = 0 points
+                    let points = 0;
+                    moduleTasks.forEach(task => {
+                        const status = (task.Status || "").toLowerCase().trim();
+                        if (status === "done") {
+                            points += 1;
+                        } else if (status.length > 0) {
+                            points += 0.5;
+                        }
+                    });
+
+                    const percentage = totalTasks === 0 ? 0 : Math.round((points / totalTasks) * 100);
+                    const isComplete = percentage === 100;
+
+                    gridHtml += `
+                        <div class="card">
+                            <h3>${mod}</h3>
+                            <div class="perc-container">
+                                <span class="percentage">${percentage}</span>
+                                <span class="perc-symbol">%</span>
+                            </div>
+                            <div class="progress-bg">
+                                <div class="progress-bar" style="width: ${percentage}%"></div>
+                            </div>
+                            <div class="footer-stats">
+                                <span>Tasks: ${totalTasks}</span>
+                                <span class="status-tag ${isComplete ? 'tag-complete' : 'tag-progress'}">
+                                    ${isComplete ? 'Completed' : 'In Progress'}
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                document.getElementById('kpiGrid').innerHTML = gridHtml;
+
+            } catch (error) {
+                console.error(error);
+                document.getElementById('kpiGrid').innerHTML = `
+                    <div class="loader" style="color: #e74c3c;">
+                        <strong>Error Loading Data</strong><br>
+                        Please ensure the Google Apps Script is deployed as 'Anyone'.
+                    </div>`;
             }
         }
 
-        function populateModules(data) {
-            const select = document.getElementById("moduleSelect");
-            const modules = [...new Set(data.map(d => d.Module))].filter(m => m);
-            
-            select.innerHTML = modules.map(m => `<option value="${m}">${m}</option>`).join("");
-            select.addEventListener("change", (e) => renderDashboard(e.target.value));
-        }
-
-        function renderDashboard(moduleName) {
-            const moduleData = cachedData.filter(d => d.Module === moduleName);
-
-            // Progress Bar
-            const total = moduleData.length;
-            const completed = moduleData.filter(d => d.Status.toLowerCase().trim() === "done").length;
-            const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
-
-            document.getElementById("progressContainer").innerHTML = `
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width:${percent}%">${percent}%</div>
-                </div>
-                <small>${completed} of ${total} tasks completed</small>
-            `;
-
-            // Table
-            let tableHTML = `<table>
-                <thead>
-                    <tr><th>Task</th><th>Status</th><th>Assignee</th><th>Date</th></tr>
-                </thead>
-                <tbody>`;
-            
-            moduleData.forEach(d => {
-                const statusClass = d.Status.toLowerCase().trim() === "done" ? "status-done" : "";
-                tableHTML += `<tr>
-                    <td>${d.Task || '-'}</td>
-                    <td class="${statusClass}">${d.Status || '-'}</td>
-                    <td>${d.AssignedTo || '-'}</td>
-                    <td>${d.Date ? new Date(d.Date).toLocaleDateString() : '-'}</td>
-                </tr>`;
-            });
-
-            tableHTML += `</tbody></table>`;
-            document.getElementById("tableContainer").innerHTML = tableHTML;
-        }
-
-        // Initialize on load
-        loadData();
+        // Run on page load
+        loadDashboard();
     </script>
 </body>
 </html>
