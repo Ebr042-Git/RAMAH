@@ -24,7 +24,77 @@ table, th, td { border: 1px solid #444; padding: 6px; }
 <h2>Task Table</h2>
 <div id="tableContainer"></div>
 
-<script type="module" src="./dist/main.js"></script>
+<script>
+// Replace with your deployed Google Apps Script Web App URL
+const API_URL = "https://script.google.com/macros/s/AKfycby1BiRAYAX0kkKWkZ38iHWxb-nEH6wVnldHCUSI8H7c2qtQ9aBOYUsRO9ddeQbv6ZAm/exec";
+
+// Load JSON data from Google Sheet
+async function loadData() {
+    try {
+        const response = await fetch(API_URL);
+        if (!response.ok) throw new Error("Failed to fetch data");
+        const data = await response.json();
+        console.log("Data loaded:", data); // check data in console
+        return data;
+    } catch (err) {
+        console.error("Error fetching data:", err);
+        return [];
+    }
+}
+
+// Populate module dropdown
+function populateModules(data) {
+    const select = document.getElementById("moduleSelect");
+    const modules = Array.from(new Set(data.map(d => d.Module)));
+
+    select.innerHTML = modules.map(m => `<option value="${m}">${m}</option>`).join("");
+    select.addEventListener("change", () => renderDashboard(data));
+}
+
+// Render progress bar and task table
+function renderDashboard(data) {
+    const moduleName = (document.getElementById("moduleSelect")).value;
+    const moduleData = data.filter(d => d.Module === moduleName);
+
+    // Progress calculation
+    const completed = moduleData.filter(d => d.Status.toLowerCase() === "done").length;
+    const percent = moduleData.length === 0 ? 0 : Math.round((completed / moduleData.length) * 100);
+
+    document.getElementById("progressContainer").innerHTML = `
+        <div class="progress-bar">
+            <div class="progress-fill" style="width:${percent}%">${percent}%</div>
+        </div>
+    `;
+
+    // Task table
+    let tableHTML = `<table>
+        <tr><th>Task</th><th>Status</th><th>Assignee</th><th>Date</th></tr>`;
+    moduleData.forEach(d => {
+        tableHTML += `<tr>
+            <td>${d.Task}</td>
+            <td>${d.Status}</td>
+            <td>${d.AssignedTo}</td>
+            <td>${d.Date}</td>
+        </tr>`;
+    });
+    tableHTML += `</table>`;
+
+    document.getElementById("tableContainer").innerHTML = tableHTML;
+}
+
+// Initialize dashboard
+async function init() {
+    const data = await loadData();
+    if (data.length === 0) {
+        document.getElementById("progressContainer").innerText = "No data found.";
+        return;
+    }
+    populateModules(data);
+    renderDashboard(data);
+}
+
+init();
+</script>
+
 </body>
 </html>
-
