@@ -25,12 +25,17 @@
         const API_URL = "https://script.google.com/macros/s/AKfycbypfFruIPEsgSJMqajv28LmRidZjoFNZsm7xenU1DkRXjemjUWtmSFl3-25YteCryMF/exec";
 
         async function saveData(payload) {
-            await fetch(API_URL, {
-                method: 'POST',
-                mode: 'no-cors', // Critical for Google Apps Script redirection
-                body: JSON.stringify(payload)
-            });
-        }
+    // We use 'no-cors' to bypass the browser security block
+    // Note: You won't be able to read the response body, but the data WILL reach the sheet.
+    await fetch(API_URL, {
+        method: 'POST',
+        mode: 'no-cors', 
+        headers: {
+            'Content-Type': 'text/plain' // Using text/plain avoids the CORS preflight trigger
+        },
+        body: JSON.stringify(payload)
+    });
+}
 
         async function markDone(row) {
             if(!confirm("Mark this task as Done?")) return;
