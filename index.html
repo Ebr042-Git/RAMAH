@@ -1,100 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Project Dashboard</title>
-<style>
-body { font-family: Arial; padding: 20px; }
-.progress-bar { width: 300px; height: 25px; background: #eee; border-radius: 5px; margin-bottom: 10px; }
-.progress-fill { height: 100%; background: #4caf50; border-radius: 5px; text-align: center; color: white; line-height: 25px; }
-table { border-collapse: collapse; margin-top: 20px; width: 70%; }
-table, th, td { border: 1px solid #444; padding: 6px; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; background-color: #f4f7f6; color: #333; }
+        h1 { color: #2c3e50; }
+        .controls { margin-bottom: 30px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        select { padding: 8px; font-size: 16px; border-radius: 4px; border: 1px solid #ddd; width: 250px; }
+        
+        .progress-bar { width: 100%; max-width: 400px; height: 30px; background: #eee; border-radius: 15px; overflow: hidden; margin: 10px 0; border: 1px solid #ddd; }
+        .progress-fill { height: 100%; background: #27ae60; text-align: center; color: white; line-height: 30px; font-weight: bold; transition: width 0.5s ease; }
+        
+        table { border-collapse: collapse; width: 100%; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-top: 10px; }
+        th { background-color: #2980b9; color: white; text-align: left; padding: 12px; }
+        td { padding: 12px; border-bottom: 1px solid #eee; }
+        tr:hover { background-color: #f9f9f9; }
+        
+        .loading { color: #888; font-style: italic; }
+        .status-done { color: #27ae60; font-weight: bold; }
+    </style>
 </head>
 <body>
 
-<h1>📊 Project Dashboard</h1>
+    <h1>📊 Project Dashboard</h1>
 
-<label>Select Module:</label>
-<select id="moduleSelect"></select>
+    <div class="controls">
+        <label><strong>Select Module:</strong></label><br><br>
+        <select id="moduleSelect">
+            <option value="">Loading data...</option>
+        </select>
+    </div>
 
-<h2>Module Progress</h2>
-<div id="progressContainer"></div>
+    <h2>Module Progress</h2>
+    <div id="progressContainer">
+        <p class="loading">Waiting for selection...</p>
+    </div>
 
-<h2>Task Table</h2>
-<div id="tableContainer"></div>
+    <h2>Task Table</h2>
+    <div id="tableContainer">
+        <p class="loading">Connect to Google Sheets to see tasks.</p>
+    </div>
 
-<script>
-// Replace with your deployed Google Apps Script Web App URL
-const API_URL = "https://script.google.com/macros/s/AKfycbzEdcuyvgbnmfYi0j4xZGu9bSj1uTDWbr9t13QTzWX_UI4Junt_HM98doudvLEhsXxQ/exec";
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbzEdcuyvgbnmfYi0j4xZGu9bSj1uTDWbr9t13QTzWX_UI4Junt_HM98doudvLEhsXxQ/exec";
+        let cachedData = [];
 
-// Load JSON data from Google Sheet
-async function loadData() {
-    try {
-        const response = await fetch(API_URL);
-        if (!response.ok) throw new Error("Failed to fetch data");
-        const data = await response.json();
-        console.log("Data loaded:", data); // check data in console
-        return data;
-    } catch (err) {
-        console.error("Error fetching data:", err);
-        return [];
-    }
-}
+        async function loadData() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error("Network error");
+                const data = await response.json();
+                cachedData = data;
+                
+                if (data.length > 0) {
+                    populateModules(data);
+                    renderDashboard(data[0].Module); // Auto-load first module
+                } else {
+                    document.getElementById("tableContainer").innerHTML = "No data found in sheet.";
+                }
+            } catch (err) {
+                console.error("Error:", err);
+                document.getElementById("tableContainer").innerHTML = "<span style='color:red'>Failed to load data. Ensure your Web App is deployed as 'Anyone'.</span>";
+            }
+        }
 
-// Populate module dropdown
-function populateModules(data) {
-    const select = document.getElementById("moduleSelect");
-    const modules = Array.from(new Set(data.map(d => d.Module)));
+        function populateModules(data) {
+            const select = document.getElementById("moduleSelect");
+            const modules = [...new Set(data.map(d => d.Module))].filter(m => m);
+            
+            select.innerHTML = modules.map(m => `<option value="${m}">${m}</option>`).join("");
+            select.addEventListener("change", (e) => renderDashboard(e.target.value));
+        }
 
-    select.innerHTML = modules.map(m => `<option value="${m}">${m}</option>`).join("");
-    select.addEventListener("change", () => renderDashboard(data));
-}
+        function renderDashboard(moduleName) {
+            const moduleData = cachedData.filter(d => d.Module === moduleName);
 
-// Render progress bar and task table
-function renderDashboard(data) {
-    const moduleName = (document.getElementById("moduleSelect")).value;
-    const moduleData = data.filter(d => d.Module === moduleName);
+            // Progress Bar
+            const total = moduleData.length;
+            const completed = moduleData.filter(d => d.Status.toLowerCase().trim() === "done").length;
+            const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
 
-    // Progress calculation
-    const completed = moduleData.filter(d => d.Status.toLowerCase() === "done").length;
-    const percent = moduleData.length === 0 ? 0 : Math.round((completed / moduleData.length) * 100);
+            document.getElementById("progressContainer").innerHTML = `
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width:${percent}%">${percent}%</div>
+                </div>
+                <small>${completed} of ${total} tasks completed</small>
+            `;
 
-    document.getElementById("progressContainer").innerHTML = `
-        <div class="progress-bar">
-            <div class="progress-fill" style="width:${percent}%">${percent}%</div>
-        </div>
-    `;
+            // Table
+            let tableHTML = `<table>
+                <thead>
+                    <tr><th>Task</th><th>Status</th><th>Assignee</th><th>Date</th></tr>
+                </thead>
+                <tbody>`;
+            
+            moduleData.forEach(d => {
+                const statusClass = d.Status.toLowerCase().trim() === "done" ? "status-done" : "";
+                tableHTML += `<tr>
+                    <td>${d.Task || '-'}</td>
+                    <td class="${statusClass}">${d.Status || '-'}</td>
+                    <td>${d.AssignedTo || '-'}</td>
+                    <td>${d.Date ? new Date(d.Date).toLocaleDateString() : '-'}</td>
+                </tr>`;
+            });
 
-    // Task table
-    let tableHTML = `<table>
-        <tr><th>Task</th><th>Status</th><th>Assignee</th><th>Date</th></tr>`;
-    moduleData.forEach(d => {
-        tableHTML += `<tr>
-            <td>${d.Task}</td>
-            <td>${d.Status}</td>
-            <td>${d.AssignedTo}</td>
-            <td>${d.Date}</td>
-        </tr>`;
-    });
-    tableHTML += `</table>`;
+            tableHTML += `</tbody></table>`;
+            document.getElementById("tableContainer").innerHTML = tableHTML;
+        }
 
-    document.getElementById("tableContainer").innerHTML = tableHTML;
-}
-
-// Initialize dashboard
-async function init() {
-    const data = await loadData();
-    if (data.length === 0) {
-        document.getElementById("progressContainer").innerText = "No data found.";
-        return;
-    }
-    populateModules(data);
-    renderDashboard(data);
-}
-
-init();
-</script>
-
+        // Initialize on load
+        loadData();
+    </script>
 </body>
 </html>
